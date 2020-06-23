@@ -44,8 +44,9 @@ router.put("/:id", (req, res) => {
   const fileContent = fs.readFileSync(fileDirectory);
   const studentsList = JSON.parse(fileContent.toString());
   if (
-    studentsList.filter((student) => student.email === req.body.email).length >
-    0
+    studentsList.filter(
+      (student) => student.email === req.body.email && student.id !== query
+    ).length > 0
   ) {
     res.status(400).send("Email must be unique");
   } else {
@@ -53,8 +54,7 @@ router.put("/:id", (req, res) => {
       (student) =>
         (student.id === query && { ...req.body, id: query }) || student
     );
-    // const filteredArr = arr.filter((student) => student.id !== query);
-    // filteredArr.
+
     fs.writeFileSync(fileDirectory, JSON.stringify(updatedStudentsList));
     res.send(updatedStudentsList);
   }
