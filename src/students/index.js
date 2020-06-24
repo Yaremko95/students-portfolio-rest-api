@@ -8,6 +8,11 @@ const uniqid = require("uniqid");
 const router = express.Router();
 
 const fileDirectory = path.join(__dirname, "students.json");
+const projectsFileDirectory = path.join(
+  __dirname,
+  "../projects",
+  "projects.json"
+);
 const readFile = (fileName) => {
   const buffer = fs.readFileSync(fileName);
   return JSON.parse(buffer.toString());
@@ -119,5 +124,13 @@ router
       next(e);
     }
   });
+router.route("/:id/projects").get((req, res) => {
+  const { id } = req.params;
+  const projects = readFile(projectsFileDirectory);
+  const numberOfProjects = projects.filter(
+    (project) => project.studentID === id
+  ).length;
+  res.send(numberOfProjects.toString());
+});
 
 module.exports = router;
