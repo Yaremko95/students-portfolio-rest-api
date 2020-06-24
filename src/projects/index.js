@@ -15,7 +15,48 @@ const readFile = (fileName) => {
   const buffer = fs.readFileSync(fileName);
   return JSON.parse(buffer.toString());
 };
+const validateBody = () => {
+  return [
+    check("name")
+      .exists()
+      .withMessage("all fields are required")
+      .not()
+      .isEmpty()
+      .withMessage("Can't be Empty"),
+    check("description")
+      .exists()
+      .withMessage("all fields are required")
+      .not()
+      .isEmpty()
+      .withMessage("Can't be Empty"),
+    check("studentID")
+      .exists()
+      .withMessage("all fields are required")
+      // .not()
+      // .isEmpty()
+      .withMessage("Can't be Empty")
+      .custom((id) => {
+        const students = readFile(studentsFileDirectory);
 
+        if (students.filter((student) => student.id === id).length === 0) {
+          throw new Error("student doesn't exist");
+        }
+        return true;
+      }),
+    check("repoURL")
+      .exists()
+      .withMessage("all fields are required")
+      .not()
+      .isEmpty()
+      .isURL(),
+    check("liveURL")
+      .exists()
+      .withMessage("all fields are required")
+      .not()
+      .isEmpty()
+      .isURL(),
+  ];
+};
 router
   .route("/")
   .get((request, response, next) => {
@@ -28,68 +69,26 @@ router
       next(e);
     }
   })
-  .post(
-    [
-      check("name")
-        .exists()
-        .withMessage("all fields are required")
-        .not()
-        .isEmpty()
-        .withMessage("Can't be Empty"),
-      check("description")
-        .exists()
-        .withMessage("all fields are required")
-        .not()
-        .isEmpty()
-        .withMessage("Can't be Empty"),
-      check("studentID")
-        .exists()
-        .withMessage("all fields are required")
-        // .not()
-        // .isEmpty()
-        .withMessage("Can't be Empty")
-        .custom((id) => {
-          const students = readFile(studentsFileDirectory);
-
-          if (students.filter((student) => student.id === id).length === 0) {
-            throw new Error("student doesn't exist");
-          }
-          return true;
-        }),
-      check("repoURL")
-        .exists()
-        .withMessage("all fields are required")
-        .not()
-        .isEmpty()
-        .isURL(),
-      check("liveURL")
-        .exists()
-        .withMessage("all fields are required")
-        .not()
-        .isEmpty()
-        .isURL(),
-    ],
-    (request, response, next) => {
-      try {
-        const errors = validationResult(request);
-        if (!errors.isEmpty()) {
-          return response.status(400).json({ errors: errors.array() });
-        }
-        const projects = readFile(fileDirectory);
-        const newProject = {
-          ...request.body,
-          id: uniqid(),
-          createdAt: new Date(),
-        };
-        projects.push(newProject);
-        fs.writeFileSync(fileDirectory, JSON.stringify(projects));
-        response.status(201).send();
-      } catch (e) {
-        e.httpRequestStatusCode = 500;
-        next(e);
+  .post(validateBody(), (request, response, next) => {
+    try {
+      const errors = validationResult(request);
+      if (!errors.isEmpty()) {
+        return response.status(400).json({ errors: errors.array() });
       }
+      const projects = readFile(fileDirectory);
+      const newProject = {
+        ...request.body,
+        id: uniqid(),
+        createdAt: new Date(),
+      };
+      projects.push(newProject);
+      fs.writeFileSync(fileDirectory, JSON.stringify(projects));
+      response.status(201).send();
+    } catch (e) {
+      e.httpRequestStatusCode = 500;
+      next(e);
     }
-  );
+  });
 router
   .route("/:id")
   .get((request, response, next) => {
@@ -103,68 +102,26 @@ router
       next(e);
     }
   })
-  .put(
-    [
-      check("name")
-        .exists()
-        .withMessage("all fields are required")
-        .not()
-        .isEmpty()
-        .withMessage("Can't be Empty"),
-      check("description")
-        .exists()
-        .withMessage("all fields are required")
-        .not()
-        .isEmpty()
-        .withMessage("Can't be Empty"),
-      check("studentID")
-        .exists()
-        .withMessage("all fields are required")
-        .not()
-        .isEmpty()
-        .withMessage("Can't be Empty")
-        .custom((id) => {
-          const students = readFile(studentsFileDirectory);
-
-          if (students.filter((student) => student.id === id).length === 0) {
-            throw new Error("student doesn't exist");
-          }
-          return true;
-        }),
-      check("repoURL")
-        .exists()
-        .withMessage("all fields are required")
-        .not()
-        .isEmpty()
-        .isURL(),
-      check("liveURL")
-        .exists()
-        .withMessage("all fields are required")
-        .not()
-        .isEmpty()
-        .isURL(),
-    ],
-    (request, response, next) => {
-      try {
-        const param = request.params.id;
-        const errors = validationResult(request);
-        if (!errors.isEmpty()) {
-          return response.status(400).json({ errors: errors.array() });
-        }
-        const projects = readFile(fileDirectory);
-
-        const updatedProjects = projects.map(
-          (project) =>
-            (project.id === param && { ...request.body, id: param }) || project
-        );
-        fs.writeFileSync(fileDirectory, JSON.stringify(updatedProjects));
-        response.status(201).send(updatedProjects);
-      } catch (e) {
-        e.httpRequestStatusCode = 500;
-        next(e);
+  .put(validateBody(), (request, response, next) => {
+    try {
+      const param = request.params.id;
+      const errors = validationResult(request);
+      if (!errors.isEmpty()) {
+        return response.status(400).json({ errors: errors.array() });
       }
+      const projects = readFile(fileDirectory);
+
+      const updatedProjects = projects.map(
+        (project) =>
+          (project.id === param && { ...request.body, id: param }) || project
+      );
+      fs.writeFileSync(fileDirectory, JSON.stringify(updatedProjects));
+      response.status(201).send(updatedProjects);
+    } catch (e) {
+      e.httpRequestStatusCode = 500;
+      next(e);
     }
-  )
+  })
   .delete((request, response, next) => {
     try {
       const param = request.params.id;

@@ -2,70 +2,122 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const _ = require("lodash");
+const { check, param, body, validationResult } = require("express-validator");
 const uniqid = require("uniqid");
+
 const router = express.Router();
 
 const fileDirectory = path.join(__dirname, "students.json");
-router.get("/", (req, resp) => {
-  const studentsList = fs.readFileSync(fileDirectory);
-  resp.send(JSON.parse(studentsList.toString()));
-});
-
-router.get("/:id", (req, res) => {
-  const query = req.params.id;
-  const fileContent = fs.readFileSync(fileDirectory);
-  const arr = JSON.parse(fileContent.toString());
-  const user = arr.find((student) => student.id === query);
-  res.send(user);
-});
-router.post("/", (req, res) => {
-  const fileContent = fs.readFileSync(fileDirectory);
-  const arr = JSON.parse(fileContent.toString());
-  const user = req.body;
-  if (!_.has(user, "name") || user.name === "") {
-    res.status(400).send("name is required");
-  } else if (!_.has(user, "surname") || user.surname === "") {
-    res.status(400).send("surname is required");
-  } else if (!_.has(user, "email") || user.email === "") {
-    res.status(400).send("email is required");
-  } else if (!_.has(user, "birthDate") || user.birthDate === "") {
-    res.status(400).send("birthDate is required");
-  } else if (arr.filter((student) => student.email === user.email).length > 0) {
-    res.status(400).send("Email must be unique");
-  } else {
-    const newUser = { ...user, id: uniqid() };
-    arr.push(newUser);
-    fs.writeFileSync(fileDirectory, JSON.stringify(arr));
-    res.status(201).send();
-  }
-});
-router.put("/:id", (req, res) => {
-  const query = req.params.id;
-  const fileContent = fs.readFileSync(fileDirectory);
-  const studentsList = JSON.parse(fileContent.toString());
+const readFile = (fileName) => {
+  const buffer = fs.readFileSync(fileName);
+  return JSON.parse(buffer.toString());
+};
+const uniqueEmail = (req, resp, next) => {
+  const students = readFile(fileDirectory);
+  const { email } = req.body;
+  const { id } = req.params;
   if (
-    studentsList.filter(
-      (student) => student.email === req.body.email && student.id !== query
-    ).length > 0
+    students.filter((student) => student.email === email && student.id !== id)
+      .length === 0
   ) {
-    res.status(400).send("Email must be unique");
+    next();
   } else {
-    const updatedStudentsList = studentsList.map(
-      (student) =>
-        (student.id === query && { ...req.body, id: query }) || student
+    console.log(
+      students.filter((student) => (student.email = email && student.id !== id))
+        .length
     );
-
-    fs.writeFileSync(fileDirectory, JSON.stringify(updatedStudentsList));
-    res.send(updatedStudentsList);
+    next("Bad request");
   }
-});
-router.delete("/:id", (req, res) => {
-  const query = req.params.id;
-  const fileContent = fs.readFileSync(fileDirectory);
-  const studentsList = JSON.parse(fileContent.toString());
-  const filtered = studentsList.filter((student) => student.id !== query);
-  fs.writeFileSync(fileDirectory, JSON.stringify(filtered));
-  res.send(filtered);
-});
+};
+const validateBody = () => {
+  return [
+    check("name").exists().withMessage("Name is required").not().isEmpty(),
+    check("surname")
+      .exists()
+      .withMessage("Surname is required")
+      .not()
+      .isEmpty(),
+
+    check("email").exists().withMessage("Email is required").isEmail(),
+    check("birthDate")
+      .exists()
+      .withMessage("birthDate is required")
+      .not()
+      .isEmpty()
+      .isDate(),
+  ];
+};
+
+router
+  .route("/")
+  .get((req, resp, next) => {
+    try {
+      const students = readFile(fileDirectory);
+      resp.send(students);
+    } catch (e) {
+      e.httpRequestStatusCode = 404;
+      next(e);
+    }
+  })
+  .post(validateBody(), uniqueEmail, (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+      const students = readFile(fileDirectory);
+      const newStudent = { ...req.body, id: uniqid() };
+      students.push(newStudent);
+      fs.writeFileSync(fileDirectory, JSON.stringify(students));
+      res.status(201).send(newStudent);
+    } catch (e) {
+      e.httpRequestStatusCode = 500;
+      next(e);
+    }
+  });
+router
+  .route("/:id")
+  .get((req, res, next) => {
+    try {
+      const param = req.params.id;
+      const students = readFile(fileDirectory);
+      const student = students.find((student) => student.id === param);
+      res.send(student);
+    } catch (e) {
+      e.httpRequestStatusCode = 500;
+      next(e);
+    }
+  })
+  .put(validateBody(), uniqueEmail, (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+      const param = req.params.id;
+      const students = readFile(fileDirectory);
+      const updatedStudentsList = students.map(
+        (student) =>
+          (student.id === param && { ...req.body, id: param }) || student
+      );
+      fs.writeFileSync(fileDirectory, JSON.stringify(updatedStudentsList));
+      res.send(updatedStudentsList);
+    } catch (e) {
+      e.httpRequestStatusCode = 500;
+      next(e);
+    }
+  })
+  .delete((req, res, next) => {
+    try {
+      const param = req.params.id;
+      const students = readFile(fileDirectory);
+      const filtered = students.filter((student) => student.id !== param);
+      fs.writeFileSync(fileDirectory, JSON.stringify(filtered));
+      res.send(filtered);
+    } catch (e) {
+      e.httpRequestStatusCode = 500;
+      next(e);
+    }
+  });
 
 module.exports = router;
