@@ -61,8 +61,16 @@ router
   .route("/")
   .get((request, response, next) => {
     try {
+      console.log(request.query);
       console.log(studentsFileDirectory);
-      const projects = readFile(fileDirectory);
+      let projects = readFile(fileDirectory);
+      for (let query in request.query) {
+        // console.log(request.query[query]);
+        projects = projects.filter((project) =>
+          project[query].includes(request.query[query])
+        );
+      }
+
       response.send(projects);
     } catch (e) {
       e.httpRequestStatusCode = 404;
