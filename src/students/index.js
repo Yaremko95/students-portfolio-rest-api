@@ -7,9 +7,13 @@ router
   .route("/")
   .get(async (req, resp, next) => {
     try {
-      const students = await StudentSchema.find({
-        country: { $regex: req.query.country },
-      });
+      const { query } = req;
+
+      for (let key in query) {
+        query[key] = { $regex: `${query[key]}`, $options: "i" };
+      }
+      console.log(query);
+      const students = await StudentSchema.find(query);
       resp.send(students);
     } catch (e) {
       e.httpRequestStatusCode = 404;
