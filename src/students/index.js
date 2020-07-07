@@ -19,13 +19,16 @@ const router = express.Router();
 //   return JSON.parse(buffer.toString());
 // };
 const uniqueEmail = async (req, resp, next) => {
-  let student = await StudentSchema.findOne({ email: req.body.email });
+  let student = await StudentSchema.findOne({
+    email: req.body.email,
+    _id: { $not: { $eq: req.body._id } },
+  });
   if (student) {
+    console.log(student);
     const error = new Error();
     error.httpRequestStatusCode = 400;
     next(error);
   } else {
-    console.log("ok");
     next();
   }
 };
@@ -62,7 +65,7 @@ router
       next(e);
     }
   })
-  .put(async (req, res, next) => {
+  .put(uniqueEmail, async (req, res, next) => {
     try {
       const { _id } = await StudentSchema.findByIdAndUpdate(
         req.params.id,
