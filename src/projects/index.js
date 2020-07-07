@@ -32,8 +32,8 @@ const validateBody = () => {
     check("studentID")
       .exists()
       .withMessage("all fields are required")
-      // .not()
-      // .isEmpty()
+      .not()
+      .isEmpty()
       .withMessage("Can't be Empty")
       .custom((id) => {
         const students = readFile(studentsFileDirectory);
@@ -97,6 +97,7 @@ router
       next(e);
     }
   });
+
 router
   .route("/:id")
   .get((request, response, next) => {
