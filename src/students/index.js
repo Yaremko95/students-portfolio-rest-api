@@ -1,37 +1,7 @@
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
 const _ = require("lodash");
-const { check, param, body, validationResult } = require("express-validator");
-const uniqid = require("uniqid");
 const StudentSchema = require("../models/studentSchema");
-
 const router = express.Router();
-
-// const fileDirectory = path.join(__dirname, "students.json");
-// const projectsFileDirectory = path.join(
-//   __dirname,
-//   "../projects",
-//   "projects.json"
-// );
-// const readFile = (fileName) => {
-//   const buffer = fs.readFileSync(fileName);
-//   return JSON.parse(buffer.toString());
-// };
-const uniqueEmail = async (req, resp, next) => {
-  let student = await StudentSchema.findOne({
-    email: req.body.email,
-    _id: { $not: { $eq: req.body._id } },
-  });
-  if (student) {
-    console.log(student);
-    const error = new Error();
-    error.httpRequestStatusCode = 400;
-    next(error);
-  } else {
-    next();
-  }
-};
 
 router
   .route("/")
@@ -44,7 +14,7 @@ router
       next(e);
     }
   })
-  .post(uniqueEmail, async (req, res, next) => {
+  .post(async (req, res, next) => {
     try {
       const newStudent = await StudentSchema(req.body);
       const { _id } = await newStudent.save();
@@ -65,7 +35,7 @@ router
       next(e);
     }
   })
-  .put(uniqueEmail, async (req, res, next) => {
+  .put(async (req, res, next) => {
     try {
       const { _id } = await StudentSchema.findByIdAndUpdate(
         req.params.id,
@@ -86,13 +56,22 @@ router
       next(e);
     }
   });
-// router.route("/:id/projects").get((req, res) => {
-//   const { id } = req.params;
-//   const projects = readFile(projectsFileDirectory);
-//   const numberOfProjects = projects.filter(
-//     (project) => project.studentID === id
-//   ).length;
-//   res.send(numberOfProjects.toString());
-// });
+router.route("/checkEmail").post(async (req, res, next) => {
+  try {
+    let student = await StudentSchema.findOne({
+      email: req.body.email,
+      _id: { $not: { $eq: req.body._id } },
+    });
+    if (student) {
+      console.log(student);
+      throw new Error();
+    } else {
+      res.status(200).send("ok");
+    }
+  } catch (e) {
+    e.httpRequestStatusCode = 400;
+    next(e);
+  }
+});
 
 module.exports = router;
