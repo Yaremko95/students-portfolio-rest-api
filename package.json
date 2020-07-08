@@ -19,7 +19,8 @@
     "lodash": "^4.17.15",
     "mongoose": "^5.9.22",
     "nodemon": "^2.0.4",
-    "uniqid": "^5.2.0"
+    "uniqid": "^5.2.0",
+    "validator": "^13.1.1"
   },
   "devDependencies": {
     "prettier": "2.0.5"
