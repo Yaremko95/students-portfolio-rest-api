@@ -2,19 +2,31 @@ const express = require("express");
 const _ = require("lodash");
 const StudentSchema = require("../models/studentSchema");
 const router = express.Router();
+const q2m = require("query-to-mongo");
 
 router
   .route("/")
   .get(async (req, resp, next) => {
     try {
       const { query } = req;
-
-      for (let key in query) {
-        query[key] = { $regex: `${query[key]}`, $options: "i" };
+      const page = query.page;
+      delete query.page;
+      const queryToMongo = q2m(query);
+      const criteria = queryToMongo.criteria;
+      for (let key in criteria) {
+        criteria[key] = { $regex: `${criteria[key]}`, $options: "i" };
       }
-      console.log(query);
-      const students = await StudentSchema.find(query);
-      resp.send(students);
+      console.log(criteria);
+      const students = await StudentSchema.find(criteria)
+        .skip(10 * page)
+        .limit(10);
+      const numOfStudents = await StudentSchema.count(criteria);
+      resp.send({
+        data: students,
+        currentPage: page,
+        pages: Math.ceil(numOfStudents / 10),
+        results: numOfStudents,
+      });
     } catch (e) {
       e.httpRequestStatusCode = 404;
       next(e);
