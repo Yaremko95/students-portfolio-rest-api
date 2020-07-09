@@ -40,5 +40,6 @@ StudentSchema.pre("save", async function (next) {
     return next(e);
   }
 });
+
 const StudentModel = mongoose.model("Student", StudentSchema);
 module.exports = StudentModel;

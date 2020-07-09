@@ -1,63 +1,7 @@
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
-const uniqid = require("uniqid");
-const { check, body, validationResult } = require("express-validator");
 const router = express.Router();
 const ProjectModel = require("../models/projectModel");
 
-const fileDirectory = path.join(__dirname, "projects.json");
-const studentsFileDirectory = path.join(
-  __dirname,
-  "../students",
-  "students.json"
-);
-const readFile = (fileName) => {
-  const buffer = fs.readFileSync(fileName);
-  return JSON.parse(buffer.toString());
-};
-const validateBody = () => {
-  return [
-    check("name")
-      .exists()
-      .withMessage("all fields are required")
-      .not()
-      .isEmpty()
-      .withMessage("Can't be Empty"),
-    check("description")
-      .exists()
-      .withMessage("all fields are required")
-      .not()
-      .isEmpty()
-      .withMessage("Can't be Empty"),
-    check("studentID")
-      .exists()
-      .withMessage("all fields are required")
-      .not()
-      .isEmpty()
-      .withMessage("Can't be Empty")
-      .custom((id) => {
-        const students = readFile(studentsFileDirectory);
-
-        if (students.filter((student) => student.id === id).length === 0) {
-          throw new Error("student doesn't exist");
-        }
-        return true;
-      }),
-    check("repoURL")
-      .exists()
-      .withMessage("all fields are required")
-      .not()
-      .isEmpty()
-      .isURL(),
-    check("liveURL")
-      .exists()
-      .withMessage("all fields are required")
-      .not()
-      .isEmpty()
-      .isURL(),
-  ];
-};
 router
   .route("/")
   .get(async (request, response, next) => {

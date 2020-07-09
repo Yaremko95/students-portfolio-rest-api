@@ -1,6 +1,7 @@
 const express = require("express");
 const _ = require("lodash");
 const StudentSchema = require("../models/studentSchema");
+const ProjectModel = require("../models/projectModel");
 const router = express.Router();
 const q2m = require("query-to-mongo");
 
@@ -74,6 +75,15 @@ router
       next(e);
     }
   });
+router.route("/:id/projects").get(async (req, res, next) => {
+  try {
+    let projects = await ProjectModel.findAllProjectsByStudentId(req.params.id);
+    res.send(projects);
+  } catch (e) {
+    e.httpRequestStatusCode = 400;
+    next(e);
+  }
+});
 router.route("/checkEmail").post(async (req, res, next) => {
   try {
     let student = await StudentSchema.findOne({
