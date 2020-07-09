@@ -4,6 +4,7 @@ const path = require("path");
 const uniqid = require("uniqid");
 const { check, body, validationResult } = require("express-validator");
 const router = express.Router();
+const ProjectModel = require("../models/projectModel");
 
 const fileDirectory = path.join(__dirname, "projects.json");
 const studentsFileDirectory = path.join(
@@ -59,39 +60,26 @@ const validateBody = () => {
 };
 router
   .route("/")
-  .get((request, response, next) => {
+  .get(async (request, response, next) => {
     try {
-      console.log(request.query);
-      console.log(studentsFileDirectory);
-      let projects = readFile(fileDirectory);
-      for (let query in request.query) {
-        // console.log(request.query[query]);
-        projects = projects.filter((project) =>
-          project[query].includes(request.query[query])
-        );
+      const { query } = request;
+      for (let key in query) {
+        query[key] = { $regex: `${query[key]}`, $options: "i" };
       }
+      console.log(query);
+      const projects = await ProjectModel.find(query).populate("studentID");
 
-      response.send(projects);
+      response.status(200).send({ data: projects });
     } catch (e) {
       e.httpRequestStatusCode = 404;
       next(e);
     }
   })
-  .post(validateBody(), (request, response, next) => {
+  .post(async (request, response, next) => {
     try {
-      const errors = validationResult(request);
-      if (!errors.isEmpty()) {
-        return response.status(400).json({ errors: errors.array() });
-      }
-      const projects = readFile(fileDirectory);
-      const newProject = {
-        ...request.body,
-        id: uniqid(),
-        createdAt: new Date(),
-      };
-      projects.push(newProject);
-      fs.writeFileSync(fileDirectory, JSON.stringify(projects));
-      response.status(201).send();
+      const newProject = await new ProjectModel(request.body);
+      const { _id } = await newProject.save();
+      response.status(200).send(_id);
     } catch (e) {
       e.httpRequestStatusCode = 500;
       next(e);
@@ -100,45 +88,31 @@ router
 
 router
   .route("/:id")
-  .get((request, response, next) => {
+  .get(async (request, response, next) => {
     try {
-      const param = request.params.id;
-      const projects = readFile(fileDirectory);
-      const project = projects.find((project) => project.id === param);
-      response.send(project);
+      const project = await ProjectModel.findById(request.params.id);
+      response.status(200).send(project);
     } catch (e) {
       e.httpRequestStatusCode = 500;
       next(e);
     }
   })
-  .put(validateBody(), (request, response, next) => {
+  .put(async (request, response, next) => {
     try {
-      const param = request.params.id;
-      const errors = validationResult(request);
-      if (!errors.isEmpty()) {
-        return response.status(400).json({ errors: errors.array() });
-      }
-      const projects = readFile(fileDirectory);
-
-      const updatedProjects = projects.map(
-        (project) =>
-          (project.id === param && { ...request.body, id: param }) || project
+      const { _id } = await ProjectModel.findByIdAndUpdate(
+        request.params.id,
+        request.body
       );
-      fs.writeFileSync(fileDirectory, JSON.stringify(updatedProjects));
-      response.status(201).send(updatedProjects);
+      response.status(200).send(_id);
     } catch (e) {
       e.httpRequestStatusCode = 500;
       next(e);
     }
   })
-  .delete((request, response, next) => {
+  .delete(async (request, response, next) => {
     try {
-      const param = request.params.id;
-
-      const projects = readFile(fileDirectory);
-      const filtered = projects.filter((project) => project.id !== param);
-      fs.writeFileSync(fileDirectory, JSON.stringify(filtered));
-      response.status(201).send(filtered);
+      const result = await ProjectModel.findByIdAndDelete(request.params.id);
+      response.status(200).send(result);
     } catch (e) {
       e.httpRequestStatusCode = 500;
       next(e);

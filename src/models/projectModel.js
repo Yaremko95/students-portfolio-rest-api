@@ -11,9 +11,10 @@ const ProjectSchema = new Schema({
     required: true,
   },
   studentID: {
-    type: Schema.Types.ObjectID,
+    type: Schema.Types.ObjectId,
     ref: "Student",
   },
+
   repoURL: {
     type: String,
     required: true,
@@ -39,6 +40,6 @@ const ProjectSchema = new Schema({
   },
 });
 
-const ProjectModel = model("Project", ProjectSchema);
+const ProjectModel = mongoose.model("Project", ProjectSchema);
 
 module.exports = ProjectModel;
