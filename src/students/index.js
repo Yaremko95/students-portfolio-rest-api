@@ -61,37 +61,72 @@ router
     });
   })
   .post(async (req, res, next) => {
-    try {
-      const newStudent = await StudentSchema(req.body);
-      const { _id } = await newStudent.save();
-      res.send(_id);
-    } catch (e) {
-      e.httpRequestStatusCode = 500;
-      next(e);
-    }
+    // try {
+    //   const newStudent = await StudentSchema(req.body);
+    //   const { _id } = await newStudent.save();
+    //   res.send(_id);
+    // } catch (e) {
+    //   e.httpRequestStatusCode = 500;
+    //   next(e);
+    // }
+    console.log(req.body);
+    const response = await db.query(
+      `INSERT INTO "Students" ( name, surname, email, "dateOfBirth") 
+                                     Values ($1, $2, $3, $4)
+                                     RETURNING *`,
+      [req.body.name, req.body.surname, req.body.email, req.body.birthDate]
+    );
+
+    console.log(response);
+    res.send(response.rows[0]);
   });
 router
   .route("/:id")
   .get(async (req, res, next) => {
-    try {
-      const student = await StudentSchema.findById(req.params.id);
-      res.send(student);
-    } catch (e) {
-      e.httpRequestStatusCode = 500;
-      next(e);
-    }
+    // try {
+    //   const student = await StudentSchema.findById(req.params.id);
+    //   res.send(student);
+    // } catch (e) {
+    //   e.httpRequestStatusCode = 500;
+    //   next(e);
+    // }
+
+    let response = await db.query(`SELECT * FROM "Students" WHERE _id=$1`, [
+      req.params.id,
+    ]);
+    console.log(response.rows);
+    res.status(200).send(response.rows[0]);
   })
   .put(async (req, res, next) => {
-    try {
-      const { _id } = await StudentSchema.findByIdAndUpdate(
-        req.params.id,
-        req.body
-      );
-      res.send(_id);
-    } catch (e) {
-      e.httpRequestStatusCode = 500;
-      next(e);
+    // try {
+    //   const { _id } = await StudentSchema.findByIdAndUpdate(
+    //     req.params.id,
+    //     req.body
+    //   );
+    //   res.send(_id);
+    // } catch (e) {
+    //   e.httpRequestStatusCode = 500;
+    //   next(e);
+    // }
+    console.log(req.body);
+    const params = [];
+    let query = `UPDATE "Students" SET `;
+    for (let key in req.body) {
+      query +=
+        (params.length > 0 ? ", " : "") +
+        '"' +
+        key +
+        '"' +
+        " = $" +
+        (params.length + 1);
+      params.push(req.body[key]);
     }
+    params.push(req.params.id);
+    query += " WHERE _id = $" + params.length + " RETURNING *";
+    console.log(query);
+    const response = await db.query(query, params);
+    if (response.rowCount === 0) return res.status(404).send("Not Found");
+    res.send(response.rows[0]);
   })
   .delete(async (req, res, next) => {
     try {
