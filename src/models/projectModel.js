@@ -41,7 +41,6 @@ const ProjectSchema = new Schema({
 });
 ProjectSchema.static("findAllProjectsByStudentId", async function (id) {
   let projects = await ProjectModel.find({ studentID: id });
-
   return projects;
 });
 const ProjectModel = mongoose.model("Project", ProjectSchema);

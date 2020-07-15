@@ -1,19 +1,32 @@
 const express = require("express");
 const router = express.Router();
 const ProjectModel = require("../models/projectModel");
-
+const q2m = require("query-to-mongo");
 router
   .route("/")
   .get(async (request, response, next) => {
     try {
       const { query } = request;
-      for (let key in query) {
-        query[key] = { $regex: `${query[key]}`, $options: "i" };
+      const page = query.page;
+      delete query.page;
+      const queryToMongo = q2m(query);
+      const criteria = queryToMongo.criteria;
+      for (let key in criteria) {
+        criteria[key] = { $regex: `${criteria[key]}`, $options: "i" };
       }
       console.log(query);
-      const projects = await ProjectModel.find(query).populate("studentID");
+      const projects = await ProjectModel.find(criteria)
+        .populate("studentID")
+        .skip(10 * page)
+        .limit(10);
+      const numOfProjects = await ProjectModel.count(criteria);
 
-      response.status(200).send({ data: projects });
+      response.status(200).send({
+        data: projects,
+        currentPage: page,
+        pages: Math.ceil(numOfProjects / 10),
+        results: numOfProjects,
+      });
     } catch (e) {
       e.httpRequestStatusCode = 404;
       next(e);

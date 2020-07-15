@@ -5,6 +5,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const mongoose = require("mongoose");
 dotenv.config();
+const db = require("./db");
 const server = express();
 server.use(cors());
 server.use(express.json());
@@ -21,13 +22,17 @@ server.use((err, req, res, next) => {
     res.status(500).send("Internal Server Error");
   }
 });
-mongoose
-  .connect("mongodb://localhost:27017/strive", {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(
-    server.listen(3000, () => {
-      console.log("running");
-    })
-  );
+// mongoose
+//   .connect("mongodb://localhost:27017/strive", {
+//     useNewUrlParser: true,
+//     useUnifiedTopology: true,
+//   })
+//   .then(
+//     server.listen(3000, () => {
+//       console.log("running");
+//     })
+//   );
+
+server.listen(process.env.PORT, () => {
+  console.log("running");
+});
